@@ -1,0 +1,57 @@
+{
+    "family": "vault-ecs-task-def",
+    "executionRoleArn": "arn:aws:iam::${ACCOUNT_ID}:role/ecsTaskExecutionRole",
+    "containerDefinitions": [
+        {
+            "name": "vault-docker",
+            "image": "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/vault:1.11.2",
+            "entryPoint": [
+                "/vault",
+                "server",
+                "-config",
+                "/etc/vault/vault-server.hcl"
+            ],
+            "portMappings": [
+                {
+                    "hostPort": 8200,
+                    "protocol": "tcp",
+                    "containerPort": 8200
+                }
+            ],
+            "environment": [
+                {  
+                    "name": "AWS_ACCESS_KEY_ID",
+                    "value": "${AWS_ACCESS_KEY_ID}"
+                },
+                {
+                    "name": "AWS_REGION",
+                    "value": "${AWS_REGION}"
+                },
+                {
+                    "name": "AWS_S3_BUCKET",
+                    "value": "${AWS_S3_BUCKET}"
+                },
+                {
+                    "name": "AWS_SECRET_ACCESS_KEY",
+                    "value": "${AWS_SECRET_ACCESS_KEY}"
+                },
+                {
+                    "name": "VAULT_AWSKMS_SEAL_KEY_ID",
+                    "value": "${AWS_KMS_SEAL_KEY_ID}"
+                }
+            ],
+            "essential": true,
+            "privileged": false
+        }
+    ],
+    "cpu": "512",
+    "memory": "1024",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "networkMode": "awsvpc",
+    "runtimePlatform": {
+        "operatingSystemFamily": "LINUX",
+        "cpuArchitecture": "X86_64"
+    }
+}
