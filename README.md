@@ -29,5 +29,9 @@ Used for [auto-unseal](https://www.vaultproject.io/docs/concepts/seal#auto-unsea
 ### ECS Fargate
 Where the Vault binary will be run from.  
 
+## AWS CodeBuild (optional, currently DISABLED)
+CodeBuild cannot reach out to the internet to download from GitHub repo unless I have a NAT provisioned otherwise I get a [DOWNLOAD_SOURCE Failed Error](https://stackoverflow.com/questions/52033869/download-source-failed-aws-codebuild).  This would require me to provision a VPC with 2-3 subnets and a NAT for each which would inflate the costs of this serverless Vault deployment, hence I will be leaving this part out (for now...?).
+
 ## IMPORTANT
 Currently I am *not* encrypting the IAM key during resource creation, meaning that both the access key id and secret access key are stored in plain text in the Terraform state file.  I am aware this is insecure and not best practices but will be something I will look to remediate at a later time.  Optionally, you can leave out the [ECS Task Definition resource](./ecs.tf) and create it via AWS CLI (manual steps outlined [here](./ecs-fargate/README.md)).  However, because the credentials are passed in as part of environment variables to the task definition, it will show up in task details and you probably don't want that.  A better way would probably be using a specific IAM role for the container instance, but I haven't really dug deep into that yet and will be in a later release as I make incremental improvements to this repo.
+

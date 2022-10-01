@@ -49,12 +49,7 @@ curl -s -X PUT ${VAULT_ADDR}/v1/sys/init --data @init.json
 
 
 ## Clean up
-#### 1 - Delete ECS Service
-```
-aws ecs delete-service --cluster vault-ecs-cluster --service vault-ecs-service --force
-```
-
-#### 2 - Destroy Resources
+#### 1 - Destroy Resources
 ```
 terraform destroy -auto-approve
 ```

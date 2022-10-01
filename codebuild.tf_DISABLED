@@ -1,0 +1,151 @@
+#---------------------------
+# CodeBuild
+#---------------------------
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role
+resource "aws_iam_role" "vault-codebuild-role" {
+  name        = "vault-codebuild-role"
+  description = "Vault CodeBuild role"
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = [
+            "codebuild.amazonaws.com",
+            "ecs-tasks.amazonaws.com"
+          ]
+        }
+        Sid = ""
+      },
+    ]
+  })
+}
+
+resource "aws_iam_policy" "codebuild-service-role-policy" {
+  name        = "codebuild-service-role-policy"
+  description = "CodeBuild service role policy"
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "cloudwatch:*",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:GetBucketAcl",
+          "s3:GetBucketLocation",
+          "ec2:CreateNetworkInterface",
+          "ec2:DescribeDhcpOptions",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeVpcs",
+          "ec2:CreateNetworkInterfacePermission",
+          "ecs:UpdateService"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "codebuild-role-attachment" {
+  role       = aws_iam_role.vault-codebuild-role.name
+  policy_arn = aws_iam_policy.codebuild-service-role-policy.arn
+}
+
+
+resource "aws_codebuild_project" "vault-on-fargate" {
+  name           = "vault-on-fargate-codebuild"
+  description    = "Build and deploy Vault on Fargate"
+  build_timeout  = "5"
+  queued_timeout = "5"
+
+  service_role = aws_iam_role.vault-codebuild-role.arn
+
+  artifacts {
+    type = "NO_ARTIFACTS"
+  }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/standard:1.0"
+    type                        = "LINUX_CONTAINER"
+    image_pull_credentials_type = "CODEBUILD"
+    privileged_mode             = "true"
+  }
+
+  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/codebuild_project#source
+  source {
+    type                = "GITHUB"
+    location            = "https://github.com/Neutrollized/hashicorp-vault-with-fargate.git"
+    git_clone_depth     = 1
+    report_build_status = "true"
+
+    #    buildspec = "buildspec.yml"
+    buildspec = <<BUILDSPEC
+version: 0.2
+phases:
+  pre_build:
+    on-failure: ABORT
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region ${var.region} | docker login --username AWS --password-stdin ${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com
+  build:
+    on-failure: ABORT
+    commands:
+      - echo Building the Docker image...
+      - docker build -t vault:${var.vault_version} ecs-fargate/.
+      - docker tag vault:${var.vault_version} ${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com/vault:${var.vault_version}
+      - echo Pushing the Docker image...
+      - docker push ${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com/vault:${var.vault_version}
+  post_build:
+    on-failure: ABORT
+    commands:
+      - echo Deploying ECS Fargate
+      - aws ecs update-service --cluster ${var.ecs_cluster_name} --service ${var.ecs_service_name} --task-definition ${aws_ecs_task_definition.ecs-task-def.arn} --force-new-deployment
+BUILDSPEC
+  }
+
+  vpc_config {
+    vpc_id = aws_default_vpc.default.id
+
+    subnets = data.aws_subnets.default.ids
+
+    security_group_ids = [
+      aws_security_group.vault.id
+    ]
+  }
+}
+
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/codebuild_webhook#bitbucket-and-github
+# NOTE: requirement to have GitHub personal access token added first before you can create webhooks
+#resource "aws_codebuild_webhook" "gh-webhook" {
+#  project_name = aws_codebuild_project.vault-on-fargate.name
+#  build_type   = "BUILD"
+#  filter_group {
+#    filter {
+#      type    = "EVENT"
+#      pattern = "PUSH"
+#    }
+#
+#    filter {
+#      type    = "HEAD_REF"
+#      pattern = "main"
+#    }
+#  }
+#}

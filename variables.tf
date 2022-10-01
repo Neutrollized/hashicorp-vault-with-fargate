@@ -41,5 +41,5 @@ variable "ecs_service_name" {
 # HashiCorp Vault
 #-------------------------
 variable "vault_version" {
-  default = "1.11.2"
+  default = "1.11.4"
 }

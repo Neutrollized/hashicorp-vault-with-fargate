@@ -1,2 +1,2 @@
-region        = "ca-central-1"
-vault_version = "1.11.0"
+region        = "us-west-1"
+vault_version = "1.11.4"

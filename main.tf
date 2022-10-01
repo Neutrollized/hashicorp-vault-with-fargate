@@ -56,6 +56,7 @@ data "aws_subnets" "default" {
 resource "aws_ecr_repository" "vault_ecr" {
   name                 = var.ecr_name
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = false
@@ -131,24 +132,3 @@ resource "aws_s3_bucket_public_access_block" "s3_block_public" {
 #  bucket = aws_s3_bucket.vault_s3_backend.id
 #  acl    = "private"
 #}
-
-
-#---------------------------
-# ECS Cluster
-#---------------------------
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_cluster
-resource "aws_ecs_cluster" "ecs_cluster" {
-  name = var.ecs_cluster_name
-}
-
-resource "aws_ecs_cluster_capacity_providers" "ecs_cluster_capacity" {
-  cluster_name = aws_ecs_cluster.ecs_cluster.name
-
-  capacity_providers = ["FARGATE"]
-
-  default_capacity_provider_strategy {
-    base              = 1
-    weight            = 100
-    capacity_provider = "FARGATE"
-  }
-}
