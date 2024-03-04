@@ -12,7 +12,7 @@ In June 2021, I released [Free-tier Vault with Cloud Run](https://github.com/Neu
 
 HashiCorp's products makes this possible by offering binaries for all sorts of architectures and operating systems, so whether you're on a Mac or Windows or Raspberry Pi, there's a binary for you!
 
-**NOTE:** I am once again building my own Vault Docker image because I wanted to learn how the IAM piece works with AWS and also using their managed [Azure Container Registry](https://aws.amazon.com/ecr/).  You can just as easily use the HashiCorp provided Docker image when deploying your ECS.
+**NOTE:** I am once again building my own Vault Docker image because I wanted to learn how the IAM piece works with AWS and also using their managed [Elastic Container Registry](https://aws.amazon.com/ecr/).  You can just as easily use the HashiCorp provided Docker image when deploying your ECS.
 
 This repo contains Terraform code that will deploy the required underlying infrastructure (ECR, S3, KMS for auto-unseal, ECS Fargate for the app deployment), but the user will have to perform some tasks via the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [ECS CLI](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_CLI_installation.html).  The details of those command can be found [here](./ecs-fargate/README.md)
 
